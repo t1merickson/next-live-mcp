@@ -1,25 +1,12 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FakeLive } from "../../../src/adapters/fake/fake-live.js";
-import { ClipEditor } from "../../../src/domain/clip-editor.js";
-import { DeviceService } from "../../../src/domain/device-service.js";
-import { MixerService } from "../../../src/domain/mixer-service.js";
-import { SetInspector } from "../../../src/domain/set-inspector.js";
-import { SongService } from "../../../src/domain/song-service.js";
-import { TrackService } from "../../../src/domain/track-service.js";
 import { createMcpServer } from "../../../src/mcp/server.js";
+import { createToolDeps } from "../../../src/mcp/tools/deps.js";
 import type { ToolDeps } from "../../../src/mcp/tools/types.js";
 
 function buildDeps(fake: FakeLive): ToolDeps {
-  return {
-    inspector: new SetInspector(fake),
-    tracks: new TrackService(fake),
-    clips: new ClipEditor(fake),
-    song: new SongService(fake),
-    devices: new DeviceService(fake),
-    mixer: new MixerService(fake),
-  };
+  return createToolDeps(fake);
 }
 
 async function connect(fake: FakeLive): Promise<Client> {
@@ -48,11 +35,12 @@ describe("MCP server over in-memory transport", () => {
     client = await connect(fake);
   });
 
-  it("lists the 22 v1 tools", async () => {
+  it("lists the 23 tools", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
         "create_audio_clip",
+        "create_arrangement_midi_clip",
         "create_midi_clip",
         "create_scenes",
         "create_tracks",
@@ -76,6 +64,63 @@ describe("MCP server over in-memory transport", () => {
         "update_track",
       ].sort(),
     );
+  });
+
+  it("publishes conservative read, write, and destructive hints", async () => {
+    const { tools } = await client.listTools();
+    const byName = new Map(tools.map((tool) => [tool.name, tool]));
+
+    expect(byName.get("get_set")?.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    });
+    expect(byName.get("update_track")?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    });
+    expect(byName.get("delete_tracks")?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: false,
+    });
+  });
+
+  it("publishes adapter capabilities and the current Set as resources", async () => {
+    const { resources } = await client.listResources();
+    expect(resources.map((resource) => resource.uri).sort()).toEqual([
+      "ableton://capabilities",
+      "ableton://set",
+    ]);
+
+    const capabilityResult = await client.readResource({
+      uri: "ableton://capabilities",
+    });
+    const capabilityText = capabilityResult.contents[0];
+    expect(capabilityText).toMatchObject({
+      uri: "ableton://capabilities",
+      mimeType: "application/json",
+    });
+    const capabilities = JSON.parse(
+      capabilityText && "text" in capabilityText ? capabilityText.text : "{}",
+    );
+    expect(capabilities).toMatchObject({
+      schema: "live-mcp-capabilities/v1",
+      adapter: { id: "fake-live", apiVersion: "1.0.0", evidence: "simulated" },
+      mutationQueue: { active: null, waiting: 0 },
+    });
+    expect(capabilities.tools).toHaveLength(23);
+    expect(capabilities.unavailableInOfficialApi).toContain("transport");
+
+    const setResult = await client.readResource({ uri: "ableton://set" });
+    const setContent = setResult.contents[0];
+    const set = JSON.parse(setContent && "text" in setContent ? setContent.text : "{}");
+    expect(set.metadataTrust).toMatch(/untrusted data/);
+    expect(set.set.tempo).toBe(120);
   });
 
   it("edit_clip_notes round-trip returns only clipId and noteCount", async () => {
@@ -126,6 +171,88 @@ describe("MCP server over in-memory transport", () => {
       "create_scenes",
       "create_midi_clip",
     ]);
+  });
+
+  it("locates a clip by current names and one-based scene number after a rename", async () => {
+    await call(client, "create_tracks", { tracks: [{ type: "midi", name: "Bass" }] });
+    await call(client, "create_scenes", { count: 2 });
+    const created = await call(client, "create_midi_clip", {
+      trackId: "t1",
+      sceneId: "s2",
+      lengthBeats: 16,
+      notes: [[27, 0, 4, 100]],
+    });
+    await call(client, "update_scene", { sceneId: "s2", name: "Bass audition" });
+    await call(client, "update_track", { trackId: "t1", name: "Renamed bass" });
+    const undoCount = fake.undoSteps.length;
+    const result = await call(client, "get_clip", { clipId: created.payload.clip.id });
+    expect(result.isError).toBe(false);
+    expect(result.payload.location).toEqual({
+      view: "session",
+      trackName: "Renamed bass",
+      sceneName: "Bass audition",
+      sceneNumber: 2,
+    });
+    expect(fake.undoSteps).toHaveLength(undoCount);
+  });
+
+  it("creates, locates, edits and deletes Arrangement MIDI without touching Session", async () => {
+    await call(client, "create_tracks", { tracks: [{ type: "midi", name: "Bass" }] });
+    const args = {
+      trackId: "t1",
+      startBeat: 132,
+      lengthBeats: 16,
+      notes: [[27, 0, 4, 100]],
+      name: "Phrase",
+    };
+    const created = await call(client, "create_arrangement_midi_clip", args);
+    expect(created.isError).toBe(false);
+    expect(created.payload.clip).toMatchObject({
+      sceneId: null,
+      startBeat: 132,
+      endBeat: 148,
+      looping: false,
+    });
+    const id = created.payload.clip.id;
+    const read = await call(client, "get_clip", { clipId: id });
+    expect(read.payload.location).toEqual({
+      view: "arrangement",
+      trackName: "Bass",
+      startBeat: 132,
+      endBeat: 148,
+    });
+    const track = await call(client, "get_track", { trackId: "t1" });
+    expect(track.payload.track.clipCount).toBe(0);
+    expect(track.payload.track.arrangementClips).toHaveLength(1);
+    const count = fake.undoSteps.length;
+    const overlap = await call(client, "create_arrangement_midi_clip", {
+      ...args,
+      startBeat: 140,
+    });
+    expect(overlap.payload.code).toBe("CONFLICT");
+    const outside = await call(client, "create_arrangement_midi_clip", {
+      ...args,
+      startBeat: 160,
+      notes: [[27, 15, 2, 100]],
+    });
+    expect(outside.payload.code).toBe("INVALID_INPUT");
+    expect(fake.undoSteps).toHaveLength(count);
+    const adjacent = await call(client, "create_arrangement_midi_clip", {
+      ...args,
+      startBeat: 148,
+    });
+    expect(adjacent.isError).toBe(false);
+    await call(client, "edit_clip_notes", { clipId: id, transform: { transpose: 12 } });
+    expect(
+      (await call(client, "get_clip", { clipId: id })).payload.clip.notes[0][0],
+    ).toBe(39);
+    await call(client, "delete_clips", { clipIds: [id] });
+    expect((await call(client, "get_clip", { clipId: id })).payload.code).toBe(
+      "NOT_FOUND",
+    );
+    expect(
+      (await call(client, "get_track", { trackId: "t1" })).payload.track.arrangementClips,
+    ).toHaveLength(1);
   });
 
   it("stale ID surfaces as structured NOT_FOUND with isError", async () => {

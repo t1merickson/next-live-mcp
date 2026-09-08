@@ -16,7 +16,8 @@ the tempo, so it leaves your set as it found it. Every write also runs through
 ## Prerequisites
 
 - **Live beta with the Extension Host**, from the Ableton beta program.
-- **Developer Mode** enabled in Live (Preferences → so unsigned extensions load).
+- **Extensions enabled** in Live under Settings → Extensions. Max for Live Developer
+  Mode is a different setting and is not required for an Ableton Extension.
 - The **SDK tarballs in `references/`** — the `@ableton-extensions/sdk` and
   `@ableton-extensions/cli` `.tgz` files from the Ableton beta program. Nothing
   Ableton-derived is committed to this repo; you must drop these in yourself.
@@ -37,6 +38,18 @@ npm run start         # builds (dev) and runs the extension inside Live via the 
 
 Live should load the extension; `ExtensionHost.txt` (see below) will show the
 `[ableton-mcp] MCP server running at …` line.
+
+If CLI host discovery does not select the beta, invoke the local CLI with the host module
+explicitly (adjust the app path for the installed build):
+
+```sh
+./node_modules/.bin/extensions-cli run . \
+  --live '/Applications/Ableton Live 12 Beta.app/Contents/Helpers/ExtensionHost/ExtensionHostNodeModule.node'
+```
+
+Do not add `-v` with CLI 1.0.0-beta.1: that code path can print a successful handshake
+and still report a false ten-second timeout because it bypasses the connection-state
+parser.
 
 ## Run the self-test
 
@@ -74,6 +87,9 @@ back to `tempDirectory` and then an OS-temp path, logging which it used.
 - [x] `npm test && npm run typecheck && npm run lint` green (CI world).
 - [x] `npm run typecheck:sdk` + `npm run build` + `npm run package` green with the SDK.
 - [x] `.ablx` artifact produced locally; nothing Ableton-derived committed.
+- [x] **Focused beta.1 development-host demonstration** — Live 12.4.15b1 on macOS,
+      2026-09-07: 24 MCP calls created and read back a four-track, 100-note Scene at
+      128 BPM; human/UI launch produced audible output. This is not the full self-test.
 - [x] **Self-test green on macOS — v1 surface only** — Live 12.4.5b8, 2026-07-24, **20/20, 0 failed**
       (required the ADR 0009 fixes: `global`→`globalThis`, custom `node:http` transport + host-globals prelude, and `toNumber` bigint coercion).
 - [ ] **Self-test re-run green on macOS including the v2a checks.** The 20/20 run predates
@@ -138,9 +154,9 @@ convenient (they are not release blockers given the green run).
 
 ### Known follow-up (not a release blocker)
 
-The stdio-bridge connection-file write is **denied in-Live** — the host sandboxes
-filesystem writes to `storageDirectory`/`tempDirectory`, but the bridge writes to a
-fixed OS path (`~/Library/Application Support/ableton-mcp/`). The write is best-effort
-(caught, logged), so it does not affect the extension or the self-test, but the
-bridge's file-based auto-discovery does not work in-Live. Revisit the bridge's
-discovery mechanism (env-var config, or write into `storageDirectory`) as a follow-up.
+The stdio bridge's fixed-path `connection.json` has inconsistent host evidence. The
+2026-07 host denied the out-of-sandbox write; the 2026-09-07 beta.1 development host
+wrote it successfully with user-only permissions. The write remains best-effort and the
+bridge supports explicit `ABLETON_MCP_URL`/`ABLETON_MCP_PORT` plus
+`ABLETON_MCP_TOKEN`. Treat environment configuration as portable until packaged
+install, restart, macOS, and Windows behavior are verified.

@@ -1,70 +1,78 @@
 # Roadmap
 
-Status as of 2026-07-21. This file is the durable entry point for resuming work.
+Status as of 2026-09-07. This is the current resumption point; dated files under
+`docs/plans/` describe how earlier slices were implemented, not what remains now.
 
-## Done — v1 feature-complete
+## Current baseline
 
-| Plan     | Scope                                                                                                           | PR  |
-| -------- | --------------------------------------------------------------------------------------------------------------- | --- |
-| 1        | Foundation: port + FakeLive + MCP server over Streamable HTTP (10 tools)                                        | #1  |
-| baseline | CI, ESLint/Prettier, architecture boundary check, Dependabot, community files                                   | #2  |
-| 2a       | Device control + batch mixer (→ 15 tools)                                                                       | #7  |
-| 2b       | Audio clips, clip update/delete, `edit_clip_notes`, scene rename/delete, generated `docs/tools.md` (→ 21 tools) | #8  |
-| 3        | Real SDK adapter, extension shell, `.ablx` packaging, in-Live self-test + runbook                               | #10 |
+- 23 MCP tools over an official Ableton Extensions SDK 1.0.0-beta.1 adapter, including
+  direct Arrangement MIDI creation.
+- Exact MCP client/server 2.0.0 packages with Zod 4 schemas.
+- Shared failure-tolerant FIFO for every mutation, plus MCP tool effects/annotations.
+- `ableton://capabilities` and `ableton://set` resources.
+- 196 tests across 42 files, SDK typecheck, lint/boundary checks, package build, archive
+  integrity, and zero reported npm advisories at the 2026-09-07 snapshot.
+- Focused macOS proof in Live 12.4.15b1: authenticated MCP read/write, tempo, four MIDI
+  tracks, 100 notes across four clips, native devices, parameter edits, mixer changes,
+  readback, human-launched Session playback, and audible meter activity.
+- Focused Arrangement proof in the same Live build: direct creation and readback of a
+  63-note timeline clip in an unused region. Arrangement edit/delete/overlap rejection
+  remain covered by FakeLive rather than destructive real-Set smoke tests.
 
-The 21-tool MCP server builds and packages to an installable `.ablx`. Architecture,
-decisions, and tool reference are in `docs/` (specs, decisions/ ADRs 0001–0007,
-capability-map, tools.md, plans/).
+See [`REAL-LIVE-VALIDATION.md`](REAL-LIVE-VALIDATION.md) for the evidence boundary and
+[`AGENT-MUSIC-GUIDE.md`](AGENT-MUSIC-GUIDE.md) for the intended musical workflow.
 
-## The v0.1.0 release gate — in-Live smoke
+## Release gate for v0.1.0
 
-**macOS: PASSED for the v1 surface** (Live 12.4.5b8, 2026-07-24 — self-test **20/20, 0
-failed**). That run predates the Plan-4a v2a checks: the self-test has since grown from 20
-to 35 checks and the 15 new ones (cue points, duplicate, warp, Simpler sample) have **not
-run in Live** — they are green in CI against FakeLive only. Getting
-there surfaced and fixed three real bugs no CI could catch — the Extension Host is a
-stripped Node `vm`-context, not full Node (see
-[`decisions/0009-real-extension-host-runtime.md`](decisions/0009-real-extension-host-runtime.md)):
-`global`→`globalThis`; a custom `node:http` transport replacing the SDK's hono-based one
-plus a host-globals prelude; and `toNumber` coercion for bigint-marshalled SDK getters.
-The fixes are on branch `fix/extension-host-global` (→ PR).
+1. Run the complete current 35-check self-test against Live 12.4.15b1 on macOS. The
+   earlier 20/20 run covered only the v1 surface; the focused beta.1 music demonstration
+   was not the full self-test.
+2. Install the produced `.ablx` through Live and verify first install, update, restart,
+   disable, and removal. The current beta.1 proof used development-host attachment.
+3. Verify Set close/switch behavior, cancellation, stale-handle recovery, and reconnect.
+4. Verify the same packaged build and self-test on Windows.
+5. Re-run the full headless gate from a clean checkout and record artifact checksum.
+6. Only then tag v0.1.0.
 
-**Remaining before tagging v0.1.0:**
+The repeatable procedure is in [`smoke-runbook.md`](smoke-runbook.md).
 
-1. Land the `fix/extension-host-global` PR on main.
-2. **macOS self-test re-run** covering the v2a checks (the 20/20 run predates them).
-3. **Windows self-test** — same procedure on a Windows Live beta (still pending; not yet
-   run). Nothing in CI can cover this (no Live host in CI).
-4. Then tag v0.1.0.
+## Next product slice: remove routine UI dependence
 
-To run the smoke on a fresh machine, follow **`docs/smoke-runbook.md`**: install the
-Extensions-capable Live beta + enable Developer Mode; drop the SDK tarballs into
-`references/`; `npm ci && npm run setup:sdk`; `npm run package` and install the `.ablx`
-(or `npm run start` for the dev build); then Scene context-menu → **Run self-test**. The
-runbook's "Deferred in-Live verifications" checklist records what the macOS run
-validated and what still wants an eyeball.
+The music demonstration used MCP for all composition, sound design, mixer edits, and
+readback. UI automation was limited to enabling Extensions, changing view, selecting a
+Scene, and launching it; a terminal command attached the development Extension Host.
 
-## Candidate next slices (after v0.1.0)
+The target steady state is zero routine computer-use automation after a one-time install:
 
-Not planned yet — each would follow the same brainstorm → spec → plan → subagent-driven
-execution flow. See `docs/capability-map.md` for what the SDK does/doesn't allow.
+1. Package and install the `.ablx` so Live owns extension startup.
+2. Make connection discovery reliable without exposing the bearer token. The fixed-path
+   connection file worked in the 2026-09-07 beta.1 development run, but earlier sandbox
+   evidence shows it cannot be assumed across host versions.
+3. Specify a narrow, optional Max for Live adapter for launch, stop, transport state, and
+   meters. It must advertise provenance and health through `ableton://capabilities`; it
+   must not duplicate the official adapter's editing authority.
+4. Keep first-time install/trust and musician-chosen visual or tactile interactions human.
+   Max for Live Developer Mode is unrelated to enabling Extensions.
 
-- **stdio proxy transport** — a tiny `npx ableton-mcp` bridge for stdio-only MCP
-  clients (the HTTP wire boundary was designed to allow this; out of scope for v1).
-- **v2 in progress**: Plan 4a (this PR — cue points, duplicate track/scene/device,
-  audio-clip warp, Simpler sample replace; spec
-  `docs/specs/2026-07-24-v2-tool-surface-design.md`, ADR
-  [0010](decisions/0010-v2-surface-shaping.md)) → Plan 4b (take lanes, rack chains)
-  → Plan 4c (file import, audio render) to follow — tracked as `deferred` in the
-  capability map until each phase lands.
-- **Concurrency hardening** — revision counters / conflict detection for
-  producer-and-AI-edit-simultaneously (v1 relies on fail-loud stale IDs).
-- **SDK version bump** — when Ableton ships API 1.1.0, follow the upgrade playbook in
-  the design spec §9 and revisit ADR 0005 (SDK may become a normal npm dependency).
+## Safety and musical capability slices
 
-## How work is run here
+In recommended order:
 
-Brainstorm (superpowers) → written spec in `docs/specs/` → plan in `docs/plans/` →
-subagent-driven execution (one implementer + adversarial review per task, final
-whole-branch review) → one PR per plan → CI green → merge. Changes to `src/port/` or
-`src/adapters/` require a capability-map and/or ADR update (see CLAUDE.md).
+- Revision-bound previews and one-use commit authority for destructive workflows.
+- Receipts containing requested delta, verified readback, and an honest undo statement.
+- Pure, tested musical transforms: scale lock, humanize, compact notation, and arrangement
+  planning. Keep these above the adapter boundary.
+- Take-lane and rack-chain support from the existing v2 design, after real beta.1 gates.
+- Explicit file-import and pre-FX render workflows that obey SDK filesystem boundaries.
+- Large-Set paging, latency budgets, and handle-invalidation stress tests.
+- Optional browser, automation, routing, or legacy Remote Script adapters only after a
+  named capability contract and independent safety review.
+
+## Deliberate non-goals
+
+- Silently falling back to UI automation when an MCP capability is absent.
+- Combining community tool lists into one ambiguous authority surface.
+- Treating Ableton Link as a control API; Link synchronizes tempo/beat phase and optional
+  start/stop intent, not Set editing.
+- Claiming audio quality from successful API calls. Human listening or a tested analysis
+  adapter remains required.

@@ -1,5 +1,9 @@
 # stdio proxy transport — design
 
+> Historical design baseline. For the implemented bridge and current discovery caveat,
+> use [ADR 0008](../decisions/0008-stdio-bridge.md) and the current
+> [`../README.md`](../README.md).
+
 **Status:** approved (brainstorm) · **Date:** 2026-07-23 · **Slice:** post-v0.1.0
 candidate "stdio proxy transport" (see `docs/ROADMAP.md`).
 

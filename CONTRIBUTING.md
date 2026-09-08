@@ -23,14 +23,17 @@ no macOS/Windows requirement.
 Building, running inside Live, and packaging the installable `.ablx` needs the
 Ableton Extensions SDK and CLI. These ship as tarballs through Ableton's extensions
 beta program — they are **not** on the npm registry and are **never committed** to
-this repo (see the `references/` entry in `.gitignore`). Download them from the beta
-program and place them under `references/extensions-sdk-<version>/`, then:
+this repo (see the `references/` entry in `.gitignore`). Here `references/` means an
+optional, private SDK cache inside this repository; it does not mean the community
+source clones used during the 2026-09 survey, which are not retained. Download the SDK
+from the beta program and place its tarballs under
+`references/extensions-sdk-<version>/`, then:
 
 ```sh
 npm run setup:sdk      # npm install --no-save the two local tarballs
 npm run typecheck:sdk  # tsc over src/extension.ts + the adapter/shell files the
                         # CI typecheck excludes (they import @ableton-extensions/sdk)
-npm start               # build:dev + `extensions-cli run .` inside Live (Developer Mode)
+npm start               # build:dev + `extensions-cli run .` inside Live with Extensions enabled
 npm run package         # build + `extensions-cli package .` → dist/<name>-<version>.ablx
 ```
 
@@ -82,10 +85,14 @@ Behavioral contracts every change must keep:
 
 ## Docs are part of the change
 
+- Start at `docs/README.md`; it distinguishes current operational truth from historical
+  specifications and implementation plans.
 - Touching `src/port/` or `src/adapters/` requires updating `docs/capability-map.md`
   and/or adding an ADR in `docs/decisions/` (numbered, append-only — supersede, don't
   rewrite).
 - `docs/tools.md` is generated — never hand-edit.
+- Changes that alter how an agent should compose, inspect, or verify music must update
+  `docs/AGENT-MUSIC-GUIDE.md`.
 
 ## SDK version upgrades
 

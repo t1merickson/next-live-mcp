@@ -16,13 +16,13 @@
  */
 import type { ServerResponse } from "node:http";
 import {
-  isJSONRPCError,
+  isJSONRPCErrorResponse,
   isJSONRPCRequest,
   isJSONRPCResponse,
   type JSONRPCMessage,
   type RequestId,
-} from "@modelcontextprotocol/sdk/types.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+  type Transport,
+} from "@modelcontextprotocol/server";
 
 const JSON_HEADERS = { "Content-Type": "application/json" } as const;
 
@@ -51,7 +51,7 @@ export class NodeHttpStatelessTransport implements Transport {
   /** The connected server sends replies (and only replies) here. */
   async send(message: JSONRPCMessage): Promise<void> {
     this.collected.push(message);
-    if (isJSONRPCResponse(message) || isJSONRPCError(message)) {
+    if (isJSONRPCResponse(message) || isJSONRPCErrorResponse(message)) {
       const id = message.id;
       if (id !== null && id !== undefined) this.pending.delete(id);
     }

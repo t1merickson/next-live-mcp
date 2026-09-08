@@ -1,5 +1,9 @@
 # v2 Tool Surface — Design Spec
 
+> Historical Phase A baseline written against SDK beta.0 and the former MCP dependency.
+> The current 23-tool beta.1 surface is documented in
+> [`../tools.md`](../tools.md) and [`../capability-map.md`](../capability-map.md).
+
 **Date:** 2026-07-24
 **Status:** Approved
 **SDK baseline:** Ableton Extensions SDK 1.0.0-beta.0 (API version `"1.0.0"`)

@@ -1,5 +1,8 @@
 # Plan 1: Foundation — Port, FakeLive, MCP Server over HTTP
 
+> Historical implementation record. Do not use its package versions, commands, pending
+> status, or code listings as current instructions; start at [`../README.md`](../README.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A working MCP server (10 tools: set/track/clip reads, track/scene/clip/note/song writes) running against an in-memory FakeLive over Streamable HTTP with bearer-token auth, validated by a CI component-test harness — no Ableton required.

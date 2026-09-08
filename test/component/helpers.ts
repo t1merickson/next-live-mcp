@@ -1,14 +1,8 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { FakeLive } from "../../src/adapters/fake/fake-live.js";
-import { ClipEditor } from "../../src/domain/clip-editor.js";
-import { DeviceService } from "../../src/domain/device-service.js";
-import { MixerService } from "../../src/domain/mixer-service.js";
-import { SetInspector } from "../../src/domain/set-inspector.js";
-import { SongService } from "../../src/domain/song-service.js";
-import { TrackService } from "../../src/domain/track-service.js";
 import { startHttpServer, type RunningHttpServer } from "../../src/mcp/http.js";
 import { createMcpServer } from "../../src/mcp/server.js";
+import { createToolDeps } from "../../src/mcp/tools/deps.js";
 
 export const TEST_TOKEN = "component-test-token";
 
@@ -21,18 +15,11 @@ export interface TestStack {
 
 /** Full stack: real MCP client → real HTTP → real tools → real services → FakeLive. */
 export async function startTestStack(fake = new FakeLive()): Promise<TestStack> {
+  const deps = createToolDeps(fake);
   const server = await startHttpServer({
     port: 0,
     token: TEST_TOKEN,
-    createServer: () =>
-      createMcpServer({
-        inspector: new SetInspector(fake),
-        tracks: new TrackService(fake),
-        clips: new ClipEditor(fake),
-        song: new SongService(fake),
-        devices: new DeviceService(fake),
-        mixer: new MixerService(fake),
-      }),
+    createServer: () => createMcpServer(deps),
   });
   const client = new Client({ name: "component-test", version: "0.0.0" });
   await client.connect(

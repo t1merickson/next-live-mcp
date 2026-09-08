@@ -30,3 +30,8 @@ HTTP listener is one isolated module; swapping transports touches only it.
 - **Companion stdio proxy** (`npx ableton-mcp` bridging stdio ↔ local socket): works
   with stdio-only clients but doubles the shipped artifacts. Deferred; the wire
   boundary permits adding it later.
+
+## Later status
+
+The companion bridge was subsequently implemented in-repo; see ADR 0008. The loopback
+HTTP server remains the canonical Live-side endpoint.

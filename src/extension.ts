@@ -16,14 +16,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { SdkAdapter } from "./adapters/sdk-1.0/sdk-adapter.js";
-import { ClipEditor } from "./domain/clip-editor.js";
-import { DeviceService } from "./domain/device-service.js";
-import { MixerService } from "./domain/mixer-service.js";
-import { SetInspector } from "./domain/set-inspector.js";
-import { SongService } from "./domain/song-service.js";
-import { TrackService } from "./domain/track-service.js";
 import { startHttpServer } from "./mcp/http.js";
 import { createMcpServer } from "./mcp/server.js";
+import { createToolDeps } from "./mcp/tools/deps.js";
 import type { ToolDeps } from "./mcp/tools/types.js";
 import { runSelfTest, type SelfTestResult } from "./shell/self-test.js";
 import { AuditLog } from "./shell/audit-log.js";
@@ -71,14 +66,13 @@ export async function activate(activation: ActivationContext): Promise<void> {
     const audit = new AuditLog(storageDir);
 
     const adapter = new SdkAdapter(context);
-    const deps: ToolDeps = {
-      inspector: new SetInspector(adapter),
-      tracks: new TrackService(adapter),
-      clips: new ClipEditor(adapter),
-      song: new SongService(adapter),
-      devices: new DeviceService(adapter),
-      mixer: new MixerService(adapter),
-    };
+    const deps = createToolDeps(adapter, {
+      id: "ableton-extensions-sdk",
+      sdkVersion: "1.0.0-beta.1",
+      apiVersion: "1.0.0",
+      hostApiVersion: activation.hostApiVersion,
+      evidence: "runtime",
+    });
 
     const server = await startHttpServer({
       port: config.port,

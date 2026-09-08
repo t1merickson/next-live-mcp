@@ -1,5 +1,9 @@
 # Plan 3: SDK Adapter, Extension Shell, Packaging, Smoke Suite
 
+> Historical implementation record written before the current Live beta was installed.
+> Use [`../smoke-runbook.md`](../smoke-runbook.md) and
+> [`../REAL-LIVE-VALIDATION.md`](../REAL-LIVE-VALIDATION.md) for current evidence.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the 21-tool MCP server run inside real Ableton Live: a `LivePort` adapter over `@ableton-extensions/sdk`, the extension shell (activate, config, status dialog, audit log), esbuild → `.ablx` packaging, and built-in self-test smoke commands with a runbook (in-Live execution deferred until Live beta is installed).

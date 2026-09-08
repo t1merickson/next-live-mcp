@@ -1,5 +1,8 @@
 # stdio Proxy Transport Bridge — Implementation Plan
 
+> Historical implementation record. The current decision and runtime caveat are in
+> [ADR 0008](../decisions/0008-stdio-bridge.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a tiny in-repo `ableton-mcp` bin that lets stdio-only MCP clients reach the extension's loopback HTTP endpoint, auto-discovering the URL + token via a fixed-path connection file.
@@ -754,7 +757,7 @@ In `docs/capability-map.md`, in the "Runtime status" section, append a sentence:
 An **stdio bridge** (`dist/bridge.cjs`, the `ableton-mcp` bin) lets stdio-only MCP
 clients reach the loopback HTTP endpoint; it auto-discovers the URL + token from a
 fixed-path `connection.json` the extension writes on activation. See
-[`decisions/0008-stdio-bridge.md`](decisions/0008-stdio-bridge.md).
+[`decisions/0008-stdio-bridge.md`](../decisions/0008-stdio-bridge.md).
 ```
 
 - [ ] **Step 3: Add stdio connection instructions to the README**

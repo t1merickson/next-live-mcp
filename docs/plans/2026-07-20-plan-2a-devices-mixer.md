@@ -1,5 +1,8 @@
 # Plan 2a: Devices & Mixer
 
+> Historical implementation record. Current behavior and schemas live in
+> [`../tools.md`](../tools.md) and [`../capability-map.md`](../capability-map.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Extend the MCP server with device control (get/insert/set-params/delete) and batch mixer control (volume/pan/sends), taking the tool surface from 10 to 15 tools — still entirely against FakeLive.

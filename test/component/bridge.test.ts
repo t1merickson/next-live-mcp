@@ -1,14 +1,9 @@
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { FakeLive } from "../../src/adapters/fake/fake-live.js";
-import { ClipEditor } from "../../src/domain/clip-editor.js";
-import { DeviceService } from "../../src/domain/device-service.js";
-import { MixerService } from "../../src/domain/mixer-service.js";
-import { SetInspector } from "../../src/domain/set-inspector.js";
-import { SongService } from "../../src/domain/song-service.js";
-import { TrackService } from "../../src/domain/track-service.js";
 import { startHttpServer } from "../../src/mcp/http.js";
 import { createMcpServer } from "../../src/mcp/server.js";
+import { createToolDeps } from "../../src/mcp/tools/deps.js";
 import { runBridge } from "../../src/bridge/bridge.js";
 
 const TOKEN = "test-token-123";
@@ -27,15 +22,10 @@ describe("stdio bridge splice", () => {
     server = await startHttpServer({
       port: 0,
       token: TOKEN,
-      createServer: () =>
-        createMcpServer({
-          inspector: new SetInspector(fake),
-          tracks: new TrackService(fake),
-          clips: new ClipEditor(fake),
-          song: new SongService(fake),
-          devices: new DeviceService(fake),
-          mixer: new MixerService(fake),
-        }),
+      createServer: (() => {
+        const deps = createToolDeps(fake);
+        return () => createMcpServer(deps);
+      })(),
     });
 
     stdin = new PassThrough();
@@ -73,7 +63,7 @@ describe("stdio bridge splice", () => {
     stdin.write(JSON.stringify({ jsonrpc: "2.0", method }) + "\n");
   }
 
-  it("initializes, lists 22 tools, and calls get_set over stdio", async () => {
+  it("initializes, lists 23 tools, and calls get_set over stdio", async () => {
     const init = await rpc(1, "initialize", {
       protocolVersion: "2025-06-18",
       capabilities: {},
@@ -83,7 +73,7 @@ describe("stdio bridge splice", () => {
     notify("notifications/initialized");
 
     const list = await rpc(2, "tools/list", {});
-    expect(list.result.tools.length).toBe(22);
+    expect(list.result.tools.length).toBe(23);
 
     const call = await rpc(3, "tools/call", { name: "get_set", arguments: {} });
     expect(call.result.content).toBeDefined();

@@ -94,6 +94,51 @@ export class ClipEditor {
     );
   }
 
+  async createArrangementMidiClip(input: {
+    trackId: TrackId;
+    startBeat: number;
+    lengthBeats: number;
+    notes: Note[];
+    name?: string;
+  }): Promise<ClipDetail> {
+    if (
+      !Number.isFinite(input.startBeat) ||
+      input.startBeat < 0 ||
+      !Number.isFinite(input.lengthBeats) ||
+      input.lengthBeats <= 0 ||
+      !Number.isFinite(input.startBeat + input.lengthBeats)
+    ) {
+      throw new PortError(
+        "INVALID_INPUT",
+        "Provide a finite nonnegative startBeat and positive lengthBeats.",
+      );
+    }
+    validateNotes(input.notes);
+    if (
+      input.notes.some(
+        (n) =>
+          !Number.isFinite(n[1]) ||
+          !Number.isFinite(n[2]) ||
+          n[1] >= input.lengthBeats ||
+          n[1] + n[2] > input.lengthBeats + 1e-6,
+      )
+    ) {
+      throw new PortError(
+        "INVALID_INPUT",
+        "Arrangement notes must fit inside the requested clip.",
+      );
+    }
+    return this.live.transact("create_arrangement_midi_clip", () =>
+      this.live.createArrangementMidiClip(
+        input.trackId,
+        input.startBeat,
+        input.lengthBeats,
+        input.notes,
+        input.name,
+      ),
+    );
+  }
+
   async replaceClipNotes(clipId: ClipId, notes: Note[]): Promise<ClipDetail> {
     await this.live.getClip(clipId); // fail fast on stale ID
     validateNotes(notes);

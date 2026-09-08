@@ -34,3 +34,11 @@ it, with `ABLETON_MCP_URL`/`ABLETON_MCP_PORT` + `ABLETON_MCP_TOKEN` env override
 - New `src/bridge/` layer stays SDK-free (auto-enforced) and is covered by the
   normal CI typecheck, unlike the SDK-only `extension.ts`.
 - The connection file carries the bearer token; it is written `0600`.
+
+## Runtime evidence update — 2026-09-07
+
+The fixed-path file was denied by the 2026-07 host sandbox but written successfully by
+the beta.1 development host in Live 12.4.15b1. This variance changes the operational
+claim: auto-discovery is a convenience, not a portable guarantee. The bridge must retain
+explicit URL/port and token environment overrides, and documentation must never expose a
+real token.

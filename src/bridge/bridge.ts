@@ -5,8 +5,8 @@
  * endpoint at the transport layer.
  */
 import type { Readable, Writable } from "node:stream";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { readConnectionFile, type ConnectionInfo } from "../shell/connection-file.js";
 
 export interface Connection {

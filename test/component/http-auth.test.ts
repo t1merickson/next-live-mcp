@@ -1,28 +1,15 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { FakeLive } from "../../src/adapters/fake/fake-live.js";
-import { ClipEditor } from "../../src/domain/clip-editor.js";
-import { DeviceService } from "../../src/domain/device-service.js";
-import { MixerService } from "../../src/domain/mixer-service.js";
-import { SetInspector } from "../../src/domain/set-inspector.js";
-import { SongService } from "../../src/domain/song-service.js";
-import { TrackService } from "../../src/domain/track-service.js";
 import { startHttpServer } from "../../src/mcp/http.js";
 import { createMcpServer } from "../../src/mcp/server.js";
+import { createToolDeps } from "../../src/mcp/tools/deps.js";
 
 const TOKEN = "test-token-123";
 
 function makeServerFactory(fake: FakeLive) {
-  return () =>
-    createMcpServer({
-      inspector: new SetInspector(fake),
-      tracks: new TrackService(fake),
-      clips: new ClipEditor(fake),
-      song: new SongService(fake),
-      devices: new DeviceService(fake),
-      mixer: new MixerService(fake),
-    });
+  const deps = createToolDeps(fake);
+  return () => createMcpServer(deps);
 }
 
 describe("HTTP transport", () => {
@@ -50,7 +37,7 @@ describe("HTTP transport", () => {
       }),
     );
     const { tools } = await client.listTools();
-    expect(tools.length).toBe(22);
+    expect(tools.length).toBe(23);
     await client.close();
   });
 

@@ -1,5 +1,8 @@
 # Plan 2b: Clip Editing, Scenes, Generated Tool Reference
 
+> Historical implementation record. Current behavior and schemas live in
+> [`../tools.md`](../tools.md) and [`../capability-map.md`](../capability-map.md).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Complete the v1 tool surface (21 tools): audio clips, clip update/delete, filter-based note editing (`edit_clip_notes`), scene rename/delete, plus the generated `docs/tools.md` with a CI freshness gate.
@@ -1268,7 +1271,7 @@ Run: `npm run gen:tools && git diff --exit-code docs/tools.md` → exits 0 (idem
 - [ ] **Step 4: Update docs/capability-map.md and README.md**
 
 - capability-map "MCP exposure status": set `v1 (implemented)` for scene update/delete, audio clip create/update/delete rows, and `edit_clip_notes`. Every v1 row is now implemented; only the `deferred` rows remain.
-- README: "(15 tools)" → "(21 tools — see [docs/tools.md](docs/tools.md))".
+- README: "(15 tools)" → "(21 tools — see [docs/tools.md](../tools.md))".
 
 - [ ] **Step 5: Run all checks; format; commit**
 

@@ -45,6 +45,13 @@ export interface LivePort {
     notes: Note[],
     name?: string,
   ): Promise<ClipDetail>;
+  createArrangementMidiClip(
+    trackId: TrackId,
+    startBeat: number,
+    lengthBeats: number,
+    notes: Note[],
+    name?: string,
+  ): Promise<ClipDetail>;
   createAudioClip(
     trackId: TrackId,
     sceneId: SceneId,

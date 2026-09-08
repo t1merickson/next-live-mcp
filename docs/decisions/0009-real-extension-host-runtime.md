@@ -79,3 +79,10 @@ not load in Live. This is exactly the gap the in-Live smoke gate exists to close
   `connection.json` discovery in-Live (the write is best-effort and caught, so it
   only logs) — tracked as a follow-up; the bridge needs env-var or
   storageDirectory-based discovery instead.
+
+## Later evidence — 2026-09-07
+
+Live 12.4.15b1 with SDK beta.1 wrote the fixed-path connection file successfully during
+a development-host run. That does not erase the earlier denial; filesystem behavior is
+host/version-dependent until packaged lifecycle testing proves otherwise. Explicit
+connection environment variables remain the portable fallback.

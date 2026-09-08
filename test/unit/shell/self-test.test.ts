@@ -1,23 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { FakeLive } from "../../../src/adapters/fake/fake-live.js";
-import { ClipEditor } from "../../../src/domain/clip-editor.js";
-import { DeviceService } from "../../../src/domain/device-service.js";
-import { MixerService } from "../../../src/domain/mixer-service.js";
-import { SetInspector } from "../../../src/domain/set-inspector.js";
-import { SongService } from "../../../src/domain/song-service.js";
-import { TrackService } from "../../../src/domain/track-service.js";
+import { createToolDeps } from "../../../src/mcp/tools/deps.js";
 import type { ToolDeps } from "../../../src/mcp/tools/types.js";
 import { runSelfTest } from "../../../src/shell/self-test.js";
 
 function makeDeps(fake: FakeLive): ToolDeps {
-  return {
-    inspector: new SetInspector(fake),
-    tracks: new TrackService(fake),
-    clips: new ClipEditor(fake),
-    song: new SongService(fake),
-    devices: new DeviceService(fake),
-    mixer: new MixerService(fake),
-  };
+  return createToolDeps(fake);
 }
 
 describe("runSelfTest against FakeLive", () => {

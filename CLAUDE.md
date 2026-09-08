@@ -34,11 +34,15 @@ structural changes.
 
 `docs/` is a maintained deliverable:
 
+- `docs/README.md` identifies current operational documents. Dated specs and plans are
+  historical records; do not treat their old dependency versions or pending status as
+  current truth.
 - Any change to `src/port/` or `src/adapters/` requires updating
   `docs/capability-map.md` and/or an ADR in `docs/decisions/`.
 - New architectural decisions get a new numbered ADR (context → decision →
   alternatives → consequences).
 - `docs/tools.md` is generated from zod schemas — never hand-edit.
+- Agent-facing behavioral changes also update `docs/AGENT-MUSIC-GUIDE.md`.
 
 ## Testing
 
@@ -52,6 +56,7 @@ structural changes.
 
 ## SDK reference
 
-`references/` (gitignored) holds the vendored Ableton Extensions SDK — tarballs,
-`.d.ts` API surface, docs, examples. Consult it rather than guessing SDK behavior.
-On SDK version bumps follow the upgrade playbook in the design spec (§9).
+`references/` (gitignored, when present) is reserved for a private Ableton Extensions
+SDK cache — tarballs, declarations, docs, and examples. It is not a home for community
+repository clones. Consult the exact SDK rather than guessing behavior. On SDK version
+bumps follow the upgrade playbook in the design spec (§9).

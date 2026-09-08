@@ -13,7 +13,7 @@ const lines: string[] = [
 
 for (const tool of allTools) {
   lines.push(`## ${tool.name}`, "", tool.description.trim(), "");
-  const entries = Object.entries(tool.inputSchema);
+  const entries = Object.entries(tool.inputSchema.shape);
   if (entries.length === 0) {
     lines.push("**Parameters:** none", "");
   } else {

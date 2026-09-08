@@ -1,5 +1,6 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { runTool } from "./envelope.js";
+import { registerResources } from "./resources.js";
 import { allTools } from "./tools/index.js";
 import type { ToolDeps } from "./tools/types.js";
 
@@ -26,13 +27,26 @@ export interface ServerOptions {
  */
 export function createMcpServer(deps: ToolDeps, options: ServerOptions = {}): McpServer {
   const server = new McpServer({ name: "ableton-live", version: "0.1.0" });
+  registerResources(server, deps);
   for (const tool of allTools) {
     server.registerTool(
       tool.name,
-      { description: tool.description, inputSchema: tool.inputSchema },
+      {
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        annotations: {
+          readOnlyHint: tool.effect === "read",
+          destructiveHint: tool.destructive ?? false,
+          idempotentHint: tool.idempotent ?? tool.effect === "read",
+          openWorldHint: false,
+        },
+      },
       async (args: Record<string, unknown>) => {
         const start = performance.now();
-        const result = await runTool(() => tool.handler(args ?? {}, deps));
+        const invoke = () => tool.handler(args ?? {}, deps);
+        const result = await runTool(() =>
+          tool.effect === "write" ? deps.mutations.run(tool.name, invoke) : invoke(),
+        );
         options.onToolResult?.({
           tool: tool.name,
           ok: result.ok,

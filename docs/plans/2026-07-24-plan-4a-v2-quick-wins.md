@@ -1,5 +1,9 @@
 # Plan 4a: v2 Quick Wins (cues, duplicate, warp, Simpler sample)
 
+> Historical implementation record written against SDK beta.0 and MCP SDK v1. The
+> features are implemented; use [`../tools.md`](../tools.md),
+> [`../capability-map.md`](../capability-map.md), and the current release gates instead.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Phase A of the v2 surface (spec: `docs/specs/2026-07-24-v2-tool-surface-design.md` §3): arrangement cue points, duplicate-as-create-mode for tracks/scenes/devices, audio-clip warp control, and Simpler sample replacement — taking the tool surface from 21 to 22 tools (one new tool `set_simpler_sample`; the rest extend existing tools).

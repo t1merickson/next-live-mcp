@@ -123,7 +123,7 @@ async function liveRefusal<T>(
 
 interface ResolvedClip {
   track: Track<V>;
-  slot: ClipSlot<V>;
+  slot: ClipSlot<V> | null;
   sceneIndex: number;
   clip: Clip<V>;
 }
@@ -179,6 +179,15 @@ export class SdkAdapter implements LivePort {
           clip: clip ? this.summarizeClip(clip) : null,
         };
       }),
+      ...(track.arrangementClips.length
+        ? {
+            arrangementClips: track.arrangementClips.map((c) => ({
+              ...this.summarizeClip(c),
+              startBeat: toNumber(c.startTime),
+              endBeat: toNumber(c.endTime),
+            })),
+          }
+        : {}),
       devices: track.devices.map((d) => ({
         id: this.deviceIds.idFor(d),
         name: d.name,
@@ -190,7 +199,7 @@ export class SdkAdapter implements LivePort {
   async getClip(id: ClipId): Promise<ClipDetail> {
     const { track, sceneIndex, clip } = this.resolveClip(id);
     const scene = this.song.scenes[sceneIndex];
-    if (!scene) {
+    if (sceneIndex >= 0 && !scene) {
       throw new PortError("INTERNAL", `clip ${id} scene index out of range`);
     }
     const filePath = this.clipFilePath(clip);
@@ -202,7 +211,10 @@ export class SdkAdapter implements LivePort {
     return {
       ...this.summarizeClip(clip),
       trackId: this.trackIds.idFor(track),
-      sceneId: this.sceneIds.idFor(scene),
+      sceneId: scene ? this.sceneIds.idFor(scene) : null,
+      ...(sceneIndex < 0
+        ? { startBeat: toNumber(clip.startTime), endBeat: toNumber(clip.endTime) }
+        : {}),
       notes: clip instanceof MidiClip ? clip.notes.map(noteFromSdk) : [],
       ...(filePath !== undefined ? { filePath } : {}),
       ...(clip instanceof AudioClip ? { warping: clip.warping } : {}),
@@ -343,6 +355,36 @@ export class SdkAdapter implements LivePort {
     return await this.getClip(this.clipIds.idFor(clip));
   }
 
+  async createArrangementMidiClip(
+    trackId: TrackId,
+    startBeat: number,
+    lengthBeats: number,
+    notes: Note[],
+    name?: string,
+  ): Promise<ClipDetail> {
+    const track = this.resolveTrack(trackId);
+    if (!(track instanceof MidiTrack))
+      throw new PortError("INVALID_INPUT", "MIDI clips require a MIDI track.");
+    if (
+      track.arrangementClips.some(
+        (c) =>
+          toNumber(c.startTime) < startBeat + lengthBeats &&
+          toNumber(c.endTime) > startBeat,
+      )
+    ) {
+      throw new PortError(
+        "CONFLICT",
+        "Requested region overlaps an Arrangement clip.",
+        "Inspect get_track and choose an empty region.",
+      );
+    }
+    const clip = await track.createMidiClip(startBeat, lengthBeats);
+    if (notes.length) clip.notes = notes.map(noteToSdk);
+    if (name !== undefined) clip.name = name;
+    clip.looping = false;
+    return this.getClip(this.clipIds.idFor(clip));
+  }
+
   async createAudioClip(
     trackId: TrackId,
     sceneId: SceneId,
@@ -399,10 +441,11 @@ export class SdkAdapter implements LivePort {
     // so duplicate IDs succeed like they do in FakeLive.
     const resolved = ids.map((id) => this.resolveClip(id));
     const seen = new Set<Clip<V>>();
-    for (const { slot, clip } of resolved) {
+    for (const { track, slot, clip } of resolved) {
       if (seen.has(clip)) continue;
       seen.add(clip);
-      await slot.deleteClip();
+      if (slot) await slot.deleteClip();
+      else await track.deleteClip(clip);
       this.clipIds.forget(clip);
     }
   }
@@ -654,6 +697,8 @@ export class SdkAdapter implements LivePort {
             return { track, slot: slots[i], sceneIndex: i, clip };
           }
         }
+        if (track.arrangementClips.includes(clip))
+          return { track, slot: null, sceneIndex: -1, clip };
       }
       this.clipIds.forget(clip);
     }
@@ -712,6 +757,9 @@ export class SdkAdapter implements LivePort {
       deviceNames: track.devices.map((d) => d.name),
       // Session clips only, matching FakeLive's session-view model.
       clipCount: track.clipSlots.filter((s) => s.clip !== null).length,
+      ...(track.arrangementClips.length
+        ? { arrangementClipCount: track.arrangementClips.length }
+        : {}),
     };
   }
 

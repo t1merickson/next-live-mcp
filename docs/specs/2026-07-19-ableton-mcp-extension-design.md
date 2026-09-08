@@ -1,5 +1,10 @@
 # Ableton MCP Extension — Design Spec
 
+> Historical design baseline. SDK beta.0, dependency, capability, and validation claims
+> reflect 2026-07-19. For current truth use [`../README.md`](../README.md),
+> [`../capability-map.md`](../capability-map.md), and
+> [`../REAL-LIVE-VALIDATION.md`](../REAL-LIVE-VALIDATION.md).
+
 **Date:** 2026-07-19
 **Status:** Approved
 **SDK baseline:** Ableton Extensions SDK 1.0.0-beta.0 (API version `"1.0.0"`)

@@ -5,12 +5,13 @@ import type { ToolDef } from "./types.js";
 export const mixerTools: ToolDef[] = [
   {
     name: "set_mixer",
+    effect: "write",
     description:
       "Set volume, pan and/or send levels for one or more tracks in ONE undo step. " +
       "Values are Live-internal raw values: volume 0..1 (0.85 = 0 dB), pan -1..1, " +
       "sends 0..1 (returnIds from get_set). Everything is validated before anything " +
       "is applied — one bad entry means nothing changes.",
-    inputSchema: {
+    inputSchema: z.object({
       updates: z
         .array(
           z.object({
@@ -23,7 +24,7 @@ export const mixerTools: ToolDef[] = [
           }),
         )
         .min(1),
-    },
+    }),
     handler: async (args, deps) => {
       const updates = args.updates as MixerUpdate[];
       await deps.mixer.setMixer(updates);

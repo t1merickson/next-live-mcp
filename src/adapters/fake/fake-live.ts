@@ -30,6 +30,7 @@ import type {
 } from "../../port/types.js";
 
 interface FakeClip {
+  startBeat?: number;
   id: ClipId;
   kind: ClipKind;
   name: string;
@@ -66,6 +67,7 @@ interface FakeTrack {
   armed: boolean;
   /** session clip per scene */
   clips: Map<SceneId, FakeClip>;
+  arrangementClips: FakeClip[];
   devices: FakeDevice[];
   mixer: FakeMixer;
 }
@@ -151,6 +153,15 @@ export class FakeLive implements LivePort {
         const clip = track.clips.get(scene.id);
         return { sceneId: scene.id, clip: clip ? this.summarizeClip(clip) : null };
       }),
+      ...(track.arrangementClips.length
+        ? {
+            arrangementClips: track.arrangementClips.map((c) => ({
+              ...this.summarizeClip(c),
+              startBeat: c.startBeat!,
+              endBeat: c.startBeat! + c.lengthBeats,
+            })),
+          }
+        : {}),
       devices: track.devices.map((d) => ({ id: d.id, name: d.name })),
       mixer: this.mixerState(track),
     };
@@ -164,6 +175,9 @@ export class FakeLive implements LivePort {
       ...this.summarizeClip(clip),
       trackId: track.id,
       sceneId,
+      ...(clip.startBeat !== undefined
+        ? { startBeat: clip.startBeat, endBeat: clip.startBeat + clip.lengthBeats }
+        : {}),
       notes: this.cloneNotes(clip.notes),
       ...(clip.filePath !== undefined ? { filePath: clip.filePath } : {}),
       ...(clip.warping !== undefined ? { warping: clip.warping } : {}),
@@ -228,6 +242,7 @@ export class FakeLive implements LivePort {
         soloed: false,
         armed: false,
         clips: new Map(),
+        arrangementClips: [],
         devices: [],
         mixer: this.defaultMixer(),
       };
@@ -312,6 +327,42 @@ export class FakeLive implements LivePort {
     };
     track.clips.set(sceneId, clip);
     return await this.getClip(clip.id);
+  }
+
+  async createArrangementMidiClip(
+    trackId: TrackId,
+    startBeat: number,
+    lengthBeats: number,
+    notes: Note[],
+    name?: string,
+  ): Promise<ClipDetail> {
+    const track = this.requireTrack(trackId);
+    if (track.type !== "midi")
+      throw new PortError("INVALID_INPUT", "MIDI clips require a MIDI track.");
+    if (
+      track.arrangementClips.some(
+        (c) =>
+          c.startBeat! < startBeat + lengthBeats &&
+          c.startBeat! + c.lengthBeats > startBeat,
+      )
+    ) {
+      throw new PortError(
+        "CONFLICT",
+        "Requested region overlaps an Arrangement clip.",
+        "Inspect get_track and choose an empty region.",
+      );
+    }
+    const clip: FakeClip = {
+      id: this.mintClipId(),
+      kind: "midi",
+      name: name ?? "MIDI Clip",
+      startBeat,
+      lengthBeats,
+      looping: false,
+      notes: this.cloneNotes(notes),
+    };
+    track.arrangementClips.push(clip);
+    return this.getClip(clip.id);
   }
 
   async replaceClipNotes(id: ClipId, notes: Note[]): Promise<void> {
@@ -545,7 +596,13 @@ export class FakeLive implements LivePort {
     }
     for (const id of ids) {
       const found = this.findClip(id);
-      if (found) found.track.clips.delete(found.sceneId);
+      if (found) {
+        if (found.sceneId !== null) found.track.clips.delete(found.sceneId);
+        else
+          found.track.arrangementClips = found.track.arrangementClips.filter(
+            (c) => c.id !== id,
+          );
+      }
     }
   }
 
@@ -622,6 +679,7 @@ export class FakeLive implements LivePort {
       soloed: source.soloed,
       armed: source.armed,
       clips,
+      arrangementClips: source.arrangementClips.map((c) => this.cloneClip(c)),
       devices: source.devices.map((d) => this.cloneDevice(d)),
       mixer: {
         volume: source.mixer.volume,
@@ -641,6 +699,9 @@ export class FakeLive implements LivePort {
       armed: track.armed,
       deviceNames: track.devices.map((d) => d.name),
       clipCount: track.clips.size,
+      ...(track.arrangementClips.length
+        ? { arrangementClipCount: track.arrangementClips.length }
+        : {}),
     };
   }
 
@@ -670,11 +731,13 @@ export class FakeLive implements LivePort {
 
   protected findClip(
     id: ClipId,
-  ): { track: FakeTrack; sceneId: SceneId; clip: FakeClip } | undefined {
+  ): { track: FakeTrack; sceneId: SceneId | null; clip: FakeClip } | undefined {
     for (const track of this.tracks) {
       for (const [sceneId, clip] of track.clips) {
         if (clip.id === id) return { track, sceneId, clip };
       }
+      const clip = track.arrangementClips.find((c) => c.id === id);
+      if (clip) return { track, sceneId: null, clip };
     }
     return undefined;
   }

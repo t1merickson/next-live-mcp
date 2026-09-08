@@ -113,7 +113,9 @@ export interface TrackSummary {
   soloed: boolean;
   armed: boolean;
   deviceNames: string[];
+  /** Session clip count. */
   clipCount: number;
+  arrangementClipCount?: number;
 }
 
 export interface SceneSummary {
@@ -170,13 +172,17 @@ export interface ClipSlot {
 
 export interface TrackDetail extends TrackSummary {
   slots: ClipSlot[];
+  arrangementClips?: Array<ClipSummary & { startBeat: number; endBeat: number }>;
   devices: DeviceRef[];
   mixer: MixerState;
 }
 
 export interface ClipDetail extends ClipSummary {
   trackId: TrackId;
-  sceneId: SceneId;
+  /** null for Arrangement clips. */
+  sceneId: SceneId | null;
+  startBeat?: number;
+  endBeat?: number;
   notes: Note[];
   /** Audio clips only. */
   filePath?: string;
